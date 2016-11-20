@@ -1,4 +1,5 @@
 (load "pc.scm")
+;(load "C:/Users/YAEL/Desktop/pc.scm")
 
 					;From Mayer's tutorial:
 (define <whitespace>
@@ -108,29 +109,34 @@
   (new (*parser (char #\#))
        (*parser (char #\\))
        (*caten 2)
+       ;(*pack-with (lambda (a b)
+        ;    (list->string `(,a ,b))))
+					;(display 'gothere)
+       (*pack-with (lambda(a b) a))
 	done))
 
 (define  <VisibleSimpleChar>
   (new
    (*parser <ValidChar> )
+   (*pack (lambda (valid) (list->string `(,valid))))
    done
    ))
 
 (define  <NamedChar>  
   (new  (*parser (word "lambda"))
-	(*pack (lambda (_)  (integer->char 955)))
+	(*pack (lambda (_) "lambda"))
 	(*parser (word "newline"))
-       	(*pack (lambda (_)  (integer->char 10)))
+       	(*pack (lambda (_) "newline"))
        	(*parser (word "nul"))
-     	(*pack (lambda (_)  (integer->char 0)))
+     	(*pack (lambda (_) "nul"))
        	(*parser (word "page"))
-       	(*pack (lambda (_) (integer->char 12)))
+       	(*pack (lambda (_) "page"))
        	(*parser (word "return"))
-      	(*pack (lambda (_) (integer->char 13)))
+      	(*pack (lambda (_) "return"))
        	(*parser (word "space"))
-      	(*pack (lambda (_) (integer->char 32)))
+      	(*pack (lambda (_) "space"))
 	(*parser (word "tab"))
-	(*pack (lambda (_) (integer->char 9)))
+	(*pack (lambda (_) "tab"))
 	(*disj 7)
 
 	done ))
@@ -138,7 +144,9 @@
 
 (define <HexChar>
   (new (*parser <digit-0-9>)
+       (*pack (lambda (digit) (list->string `(,digit)))) 
        (*parser <a-f_Char>)
+       (*pack (lambda (character) (list->string `(,character)))) 
        (*disj 2)
        done
        ))
@@ -147,26 +155,23 @@
   (new (*parser (char #\x))
        (*parser <HexChar>) *plus
        (*caten 2)
-       (*pack-with (lambda(xChar list)
-		    (integer->char
-		     (string->number
-		      (list->string list) 16))))
        done))
 
 (define <Char>
-  (new (*parser <CharPrefix>)
-       (*parser <NamedChar>)
-       (*parser <HexUnicodeChar>)
-       (*parser <VisibleSimpleChar>)
-       (*disj 3)
-       (*caten 2)
-       (*pack-with (lambda(pre ch)
+ (new (*parser <CharPrefix>)
+      (*parser <VisibleSimpleChar>)
+      (*parser <NamedChar>)
+      (*parser <HexUnicodeChar>)
+      (*disj 3)
+      (*caten 2)
+      (*pack-with (lambda(pre ch)
 		    ch))
       done))
 
 (define <StringLiteralChar> 
   (new (*parser <any-char>)
        (*parser (char #\\)) *diff
+       (*pack (lambda (x) (list->string `(,x))))
        done))
 
 (define <StringMetaChar>
@@ -187,20 +192,21 @@
 
 	       
 (define <StringHexChar>
-  (new (*parser (char #\\))
-       (*parser (char #\x))
+  (new (*parser (char "\\"))
+       (*parser (char "x"))
        (*parser <HexChar>) *star
        (*caten 3)
+       (*pack-with (lambda (first mid rest) (list->string `(,first ,mid ,rest))))
        done))
 
-(define <StringChar>
-  (new (*parser <StringLiteralChar>)
-     ;  (*parser <StringMetaChar>)
-     ;  (*parser <StringHexChar>)
-    ;   (*disj 2)
+#;(define <StringChar>
+  (new (*parser <StringVisibaleChar>)
+       (*parser <StringMetaChar>)
+       (*parser <StringHexCar>)
+       (*disj 3)
        done));
 
-(define <String> 
+#;(define <String> 
   (new (*parser (char #\"))
        (*parser <StringChar>) *star
        (*parser (char #\"))
@@ -250,6 +256,7 @@
 	(lambda (num div den)
 	  (/ num den)))
        done))
+
 (define <Number>
   (new (*parser <Fraction>)
        (*parser <Integer>)
@@ -261,12 +268,12 @@
        (*parser <ci-Char-a-z>)
        (*parser <Chars-for-SymbolChar>)
        (*disj 3)
-      done))
+       done))
 
 (define <Symbol>
   (new (*parser <SymbolChar>) *plus
-       ;(*pack (lambda(x) (list->string x))) 
-      done))
+       (*pack (lambda(x) (string->symbol (list->string x))))
+       done))
 
 
 (define <open-Bra>
@@ -300,19 +307,20 @@
        (*delayed (lambda () <Sexpr> ))
        (*parser <close-Bra>)
        (*caten 5)
-       (*pack-with (lambda(a exps c last e)
-		     (fold-right cons last exps)))
+       (*pack-with (lambda(a list c last e)
+		    (cons list last)))
        done))
 
 (define <Vector>
   (new (*parser (char #\# ))
        (*parser <open-Bra>)
       (*delayed (lambda () <Sexpr> )) *star
-       (*parser <close-Bra> )
+       (*parser <close-Bra>)
        (*caten 4)
        (*pack-with
 	(lambda(a b sexprs d)
-	  sexprs))
+	  (list->vector sexprs)))
+;	  (vector sexprs)))
        done))
 
 (define <Quoted>
@@ -338,15 +346,15 @@
        (*caten 2)
        (*pack-with (lambda(ch sexpr)
 		     (list 'unquote sexpr)))
-	      done))
+       done))
 
 (define <UnquoteAndSpliced>
   (new (*parser (char #\, ))
        (*parser (char #\@ ))
-        (*delayed (lambda () <Sexpr>))
-       (*caten 3)
+       (*delayed (lambda () <Sexpr>))
+	(*caten 3)
        (*pack-with (lambda(ch1 ch2 sexpr)
-			    (list 'unquote-splicing sexpr)))
+		     (list 'unquote-splicing sexpr)))
        done))
 
 
@@ -356,7 +364,7 @@
  (new (*parser <Boolean>)
       (*parser <Char>)
       (*parser <Number>)
-      (*parser <String>)  
+					;       (*parser <String>)  
       (*parser <Symbol>)
       (*parser <ProperList>)
       (*parser <ImproperList>)
@@ -366,12 +374,9 @@
       (*parser <Unquoted>)
       (*parser <UnquoteAndSpliced>)
       (*delayed (lambda () <InfixExtension>))
-;       (*disj 13)
-       (*disj 13)
+      (*disj 12)
        done
        )))
-
-
 
 (define <InfixPrefixExtensionPrefix>
   (new (*parser (char #\#))
@@ -386,7 +391,14 @@
        done))
 
 #;(define <InfixAdd>
-  (new))
+  (new (*delayed (lambda() <InfixExpression>))
+       (*parser (char #\+))
+       (*delayed (lambda() <InfixExpression>))
+       (*caten 3)
+       (*pack-with (lambda(exp1 ch exp2)
+		     (list ch exp1 exp2)))
+       done))
+
 
 (define <InfixNeg>
   (new (*parser (char #\-))
@@ -394,14 +406,22 @@
        (*caten 2)
        (*pack-with (lambda(char exp)
 		     (- exp)))
-  done))
+       done))
 
+(define <PowerSymbol>
+  (new (*parser (char #\^))
+       (*parser (char #\*))
+       (*parser (char #\*))
+       (*caten 2)
+       (*disj 2)
+       done))
 
 (define  <InfixExpression>
-  (new 
-;	 (*parser <InfixAdd>)
-	 (*parser <InfixNeg>)
-
+  (^<skipped*>
+   (new
+    (*parser <InfixAdd>)
+    (*parser <InfixNeg>)
+    (*parser <Number>)
 ;	 (*parser <InfixSub>)
 ;	 (*parser <InfixMul>)
 ;	 (*parser <InfixDiv>)
@@ -411,10 +431,10 @@
 ;	 (*parser <InfixParen>)
 ;	 (*parser <InfixSexprEscape>)
 ;	 (*parser <InfixSymbol>)
-	 (*parser <Number>)
-	 (*disj 2)
-	 done
-	 ))
+
+    (*disj 3)
+    done
+    )))
 
 (define <InfixExtension>
   (new (*parser <InfixPrefixExtensionPrefix>)
