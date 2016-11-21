@@ -366,7 +366,6 @@
       (*parser <Unquoted>)
       (*parser <UnquoteAndSpliced>)
       (*delayed (lambda () <InfixExtension>))
-;       (*disj 13)
        (*disj 13)
        done
        )))
@@ -376,17 +375,44 @@
 (define <InfixPrefixExtensionPrefix>
   (new (*parser (char #\#))
        (*parser (char #\#))
-      ; (*caten 2)
-      ; (*parser (char #\#))
-       (*parser (char #\%))
-      ; (*caten 2)
-      ; (*disj 2)
-       (*disj 2)
        (*caten 2)
+       (*parser (char #\#))
+       (*parser (char #\%))
+       (*caten 2)
+       (*disj 2)
+      ; (*disj 2)
+       ;(*caten 2)
        done))
 
-#;(define <InfixAdd>
-  (new))
+
+
+(define <InfixMul>
+  (new	 (*parser <Number>)
+	 (*parser (char #\*))
+	 (*parser <Number>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
+
+
+(define <InfixAdd>
+  (new	 (*parser <InfixMul>)
+	 (*parser (char #\+))
+	 (*parser <InfixMul>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
+
+(define <InfixSub>
+  (new	 (*parser <InfixAdd>)
+	 (*parser (char #\-))
+	 (*parser <InfixAdd>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
 
 (define <InfixNeg>
   (new (*parser (char #\-))
@@ -394,32 +420,159 @@
        (*caten 2)
        (*pack-with (lambda(char exp)
 		     (- exp)))
-  done))
+       done))
 
 
-(define  <InfixExpression>
-  (new 
-;	 (*parser <InfixAdd>)
-	 (*parser <InfixNeg>)
+(define <InfixParen>
+  (new    (*parser (char #\( ))
+          (*delayed (lambda() <Initial>))
+          (*parser (char #\)))
+          (*caten 3)
+          (*pack-with (lambda(bra1 exp bra2)
+                        exp))
+          done))
 
-;	 (*parser <InfixSub>)
-;	 (*parser <InfixMul>)
-;	 (*parser <InfixDiv>)
-;	 (*parser <InfixPow>)
+
+(define <PlusMinusChars>
+  (new (*parser (char #\+))
+       (*parser (char #\-))
+       (*disj 2)
+       done))
+(define <MulDivChars>
+  (new (*parser (char #\*))
+       (*parser (char #\/))
+       (*disj 2)
+       done))
+
+(define <PowChars>
+  (new (*parser (char #\^))
+       done))
+
+(define <Pow_End> ;L3
+  (new
+   (*parser <Number>)
+   (*parser <Symbol>)  
+   (*parser <InfixParen>)
+   (*disj 3)
+   done))
+
+(define <MulDiv> ;L2
+  (new
+   (*parser <Pow_End>)
+   (*parser <PowChars>)
+   (*parser <Pow_End>)
+   (*caten 2)
+   (*pack-with (lambda (sign exps)
+                 (lambda (first_element)
+                   `(,(string->symbol (string sign)) ,first_element ,exps))))
+   *star
+   (*caten 2)
+     (*pack-with (lambda (first_exp lambda_rest_exps)
+                   (fold-left (lambda (operator acc)
+                                (acc operator)) first_exp lambda_rest_exps)))
+   done))
+
+
+
+(define <AddSub> ;L1
+    (new
+     (*parser <MulDiv>)
+     (*parser <MulDivChars>)
+     (*parser <MulDiv>)
+     (*caten 2)
+     (*pack-with (lambda (sign exps)
+                    (lambda (first_element)
+                      `(,(string->symbol (string sign)) ,first_element ,exps))))
+     *star
+     (*caten 2)
+     (*pack-with (lambda (first_exp lambda_rest_exps)
+                   (fold-left (lambda (operator acc)
+                                (acc operator)) first_exp lambda_rest_exps)))
+     done))
+
+
+(define <Initial>  ;L0
+  (new
+   (*parser <AddSub>)
+   (*parser <PlusMinusChars>)
+   (*parser <AddSub>)
+   (*caten 2)
+        (*pack-with (lambda (sign exps)
+                    (lambda (first_element)
+                      `(,(string->symbol (string sign)) ,first_element ,exps))))
+   *star
+   (*caten 2)
+     (*pack-with (lambda (first_exp lambda_rest_exps)
+                   (fold-left (lambda (operator acc)
+                                (acc operator)) first_exp lambda_rest_exps)))
+
 ;	 (*parser <InfixArrayGet>)
 ;	 (*parser <InfixFuncall>)
-;	 (*parser <InfixParen>)
 ;	 (*parser <InfixSexprEscape>)
 ;	 (*parser <InfixSymbol>)
-	 (*parser <Number>)
-	 (*disj 2)
-	 done
-	 ))
+	 ;(*disj 2)
+   done))
 
 (define <InfixExtension>
   (new (*parser <InfixPrefixExtensionPrefix>)
-       (*parser <InfixExpression>)
+       (*parser <Initial>)
        (*caten 2)
        (*pack-with
-	(lambda(pre exp) exp))
+        (lambda(pre exp) exp))
 done))
+
+
+
+  
+;---------------------------------------------------------------------------------------------------------------------------
+;<infixExp>==><sub>
+;*<sub>==> <add>(' - ' <add>)
+;*<add>==> <div>(' + ' <div>)
+;*<div>==> <mul>(' / ' <mul>)
+;.............
+;<theLastOne> ==>(number | infixSymbol | parenthesis |........)
+
+
+;ביטוי infix-הכיוון לפי מה שהבנתי הוא
+; + הופך לביטוי כפל, כפל הופך לחזקה, חזקה למס', מס' לסוגריים
+
+;. זאת אומרת גזירה מהתעדוף הכי נמוך לגבוה
+;. זה הכיוון, עוד לא מצאתי פיתרון.
+
+
+
+#;(define <End>
+  (new
+   (*parser <Number>)
+   (*parser  <InfixNeg>)
+;  (*parser <Weak>)
+   
+   (*disj 2 )
+   done))
+
+#;(define <Sub>
+  (new
+   (*parser <End>)
+   (*parser (char #\-))
+   (*parser <End>)
+   (*caten 3)
+   (*pack-with (lambda(exp1 op exp2)
+		 (list op exp1 exp2)))
+   done))
+
+
+
+
+  #;(define <Add>
+  (new
+   ;(*delayed (lambda() <Initial>))
+   (*parser <End>)
+  ; (*disj 2)
+   (*parser (char #\+))
+   (*delayed (lambda() <Initial>))
+   ;(*parser <End>)
+  ; (*disj 2)
+   (*caten 3) 
+   (*pack-with (lambda(exp1 op exp2)
+		 (list op exp1 exp2)))
+   done))
