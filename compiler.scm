@@ -385,8 +385,35 @@
        (*caten 2)
        done))
 
-#;(define <InfixAdd>
-  (new))
+
+
+(define <InfixMul>
+  (new	 (*parser <Number>)
+	 (*parser (char #\*))
+	 (*parser <Number>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
+
+
+(define <InfixAdd>
+  (new	 (*parser <InfixMul>)
+	 (*parser (char #\+))
+	 (*parser <InfixMul>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
+
+(define <InfixSub>
+  (new	 (*parser <InfixAdd>)
+	 (*parser (char #\-))
+	 (*parser <InfixAdd>)
+	 (*caten 3)
+	 (*pack-with (lambda(exp1 ch exp2)
+		       (list ch exp1 exp2)))
+	 done))
 
 (define <InfixNeg>
   (new (*parser (char #\-))
@@ -400,9 +427,9 @@
 (define  <InfixExpression>
   (new 
 ;	 (*parser <InfixAdd>)
-	 (*parser <InfixNeg>)
+;	 (*parser <InfixNeg>)
 
-;	 (*parser <InfixSub>)
+	 (*parser <InfixAdd>)
 ;	 (*parser <InfixMul>)
 ;	 (*parser <InfixDiv>)
 ;	 (*parser <InfixPow>)
@@ -411,8 +438,8 @@
 ;	 (*parser <InfixParen>)
 ;	 (*parser <InfixSexprEscape>)
 ;	 (*parser <InfixSymbol>)
-	 (*parser <Number>)
-	 (*disj 2)
+;	 (*parser <Number>)
+	 ;(*disj 2)
 	 done
 	 ))
 
@@ -423,3 +450,23 @@
        (*pack-with
 	(lambda(pre exp) exp))
 done))
+
+
+
+
+
+
+;<infixExp>==><sub>
+;*<sub>==> <add>(' - ' <add>)
+;*<add>==> <div>(' + ' <div>)
+;*<div>==> <mul>(' / ' <mul>)
+;.............
+;<theLastOne> ==> (number | infixSymbol | parenthesis |........)
+
+
+
+;ביטוי infix-הכיוון לפי מה שהבנתי הוא
+; + הופך לביטוי כפל, כפל הופך לחזקה, חזקה למס', מס' לסוגריים
+
+;. זאת אומרת גזירה מהתעדוף הכי נמוך לגבוה
+;. זה הכיוון, עוד לא מצאתי פיתרון.
