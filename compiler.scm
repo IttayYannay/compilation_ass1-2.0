@@ -526,12 +526,13 @@
 (define <Pow_End> ;L3=Number|InfixSymbolSymbol|InfixParen
   (^<skipped*>
    (new
+    (*parser <InfixNeg>)
    (*parser <Number>)
    (*parser  <InfixArrayGet>) ;symbol
    (*parser  <InfixArgList>)  ;symbol
    (*parser <InfixSymbol>)     
    (*parser <InfixParen>)
-   (*disj 5)
+   (*disj 6)
    done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
@@ -543,7 +544,7 @@
    (*caten 2)
    (*pack-with (lambda (sign exps)
                  (lambda (first_element)
-                   `(,(string->symbol (string sign)) ,first_element ,exps))))
+                   `(expt ,first_element ,exps))))
    *star
    (*caten 2)
      (*pack-with (lambda (first_exp lambda_rest_exps)
@@ -590,8 +591,8 @@
 (define <InfixExtension>
   (new (*parser <InfixPrefixExtensionPrefix>)
        (*parser <Initial>)
-       (*parser <Sexpr>)
-       (*disj 2)
+       ;(*parser <Sexpr>)
+       ;(*disj 2)
        (*caten 2)
        (*pack-with
         (lambda(pre exp) exp))
