@@ -327,7 +327,7 @@
        (*caten 4)
        (*pack-with
 	(lambda(a b sexprs d)
-	  sexprs))
+	  (list->vector sexprs)))
        done))
 
 (define <Quoted>
@@ -530,7 +530,7 @@
    (*parser <Number>)
    (*parser  <InfixArrayGet>) ;symbol
    (*parser  <InfixArgList>)  ;symbol
-   (*parser <InfixSexprEscape>)
+   (*delayed (lambda() <InfixSexprEscape>))
    (*parser <InfixSymbol>)     
    (*parser <InfixParen>)
    (*disj 7)
