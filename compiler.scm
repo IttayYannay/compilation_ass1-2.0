@@ -50,6 +50,18 @@
 ; done dealing with whitespace & endline
 
 
+#;(define <a>
+  (new (*parser <a-f_Char>)
+       *star
+       (*parser (char #\z))
+       *not-followed-by
+
+;*not-followed-by       
+  done))
+
+
+
+
 (define <digit-0-9>
   (range #\0 #\9))
 
@@ -64,6 +76,27 @@
 
 (define <ci-Char-a-z>
   (range-ci #\a #\z))
+
+
+(define <Chars_no_Numbers>
+  (new (*parser <any-char>)
+       (*parser <digit-0-9>)
+       *diff
+       done))
+
+(define <Chars_no_zero>
+  (new (*parser <any-char>)
+       (*parser (char #\0))
+       *diff
+       done))
+
+#;(define <test1>
+  (new (*parser <SymbolChar>)
+       (*parser <InfixSymbolList>)
+       *diff
+       *star
+       (*pack (lambda(x) (string->symbol (list->string x))))
+       done))
 
 (define <Chars-for-SymbolChar>
   (new (*parser (char #\!))
@@ -220,18 +253,34 @@
                     (list->string str)))
        done))
 
+(define <OnlyNumbers>
+  (new
+     (*parser
+     (not-followed-by <Number> <Symbol>))
+  done)
+  )
+
 (define <Natural>
-  (new (*parser (char #\0))
-       (*pack (lambda (_) 0))
+  (new 
+       (*parser (char #\0)) *star
        (*parser <digit-1-9>)
        (*parser <digit-0-9>) *star
-       (*caten 2)
+       ;(*parser <Chars_no_Numbers>)
+      ; *not-followed-by
+       (*caten 3)
        (*pack-with
-	(lambda (a s)
+	(lambda (zeros a s)
 	  (string->number
 	   (list->string
 	    `(,a ,@s)))))
+       
+       (*parser (char #\0)) *plus
+       ;(*parser <Chars_no_zero>)
+       ;*not-followed-by
+       (*pack (lambda (_) 0))
+
        (*disj 2)
+       
        done))
 
 (define <Integer>
@@ -261,8 +310,11 @@
        (*caten 3)
        (*pack-with
 	(lambda (num div den)
-	  (/ num den)))
+          (if (zero? num)
+              0
+              (/ num den))))
        done))
+
 (define <Number>
   (new (*parser <Fraction>)
        (*parser <Integer>)
@@ -368,7 +420,7 @@
 (^<skipped*>  ;support for comment-line & whitespace 
  (new (*parser <Boolean>)
       (*parser <Char>)
-      (*parser <Number>)
+      (*parser <OnlyNumbers>)
       (*parser <String>)  
       (*parser <Symbol>)
       (*parser <ProperList>)
@@ -395,7 +447,7 @@
        ;(*caten 2)
        done))
 
-(define <InfixMul>
+#;(define <InfixMul>
   (new	 (*parser <Number>)
 	 (*parser (char #\*))
 	 (*parser <Number>)
@@ -405,7 +457,7 @@
 	 done))
 
 
-(define <InfixAdd>
+#;(define <InfixAdd>
   (new	 (*parser <InfixMul>)
 	 (*parser (char #\+))
 	 (*parser <InfixMul>)
@@ -414,7 +466,7 @@
 		       (list ch exp1 exp2)))
 	 done))
 
-(define <InfixSub>
+#;(define <InfixSub>
   (new	 (*parser <InfixAdd>)
 	 (*parser (char #\-))
 	 (*parser <InfixAdd>)
@@ -473,7 +525,7 @@
   (*delayed (lambda() <InfixSymbol>)) ;change to InfixSymbol
   (*parser (char #\[))
   (*delayed (lambda() <Initial>))
-  (*parser (char#\]))
+  (*parser (char #\]))
   (*caten 4)
   (*pack-with (lambda (vec par1 index par2)
 		`(vector-ref ,vec ,index)))
@@ -488,6 +540,8 @@
   (*pack-with (lambda(vec index)
 		`(vector-ref ,vec ,index)))
   done))
+
+
 
 (define <InfixArgList>
   (new (*delayed (lambda() <Sexpr>)) 
