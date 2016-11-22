@@ -78,13 +78,13 @@
   (range-ci #\a #\z))
 
 
-(define <Chars_no_Numbers>
+#;(define <Chars_no_Numbers>
   (new (*parser <any-char>)
        (*parser <digit-0-9>)
        *diff
        done))
 
-(define <Chars_no_zero>
+#;(define <Chars_no_zero>
   (new (*parser <any-char>)
        (*parser (char #\0))
        *diff
@@ -253,12 +253,10 @@
                     (list->string str)))
        done))
 
-(define <OnlyNumbers>
-  (new
-     (*parser
-     (not-followed-by <Number> <Symbol>))
-  done)
-  )
+(define <Numbers_Char_Filter>
+  (new (*parser
+        (not-followed-by <Number> <Symbol>))
+       done))
 
 (define <Natural>
   (new 
