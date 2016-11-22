@@ -205,7 +205,7 @@
        done))
 
 (define <StringChar>
-  (new (*parser <StringLiteralChar>)
+  (new (*parser <StringLiteralChar>) ;case sensative
        (*parser <StringMetaChar>)
        (*parser <StringHexChar>)
        (*disj 3)
@@ -363,7 +363,6 @@
        done))
 
 
-
 (define <Sexpr> 
 (^<skipped*>  ;support for comment-line & whitespace 
  (new (*parser <Boolean>)
@@ -384,7 +383,6 @@
        )))
 
 
-
 (define <InfixPrefixExtensionPrefix>
   (new (*parser (char #\#))
        (*parser (char #\#))
@@ -396,7 +394,6 @@
       ; (*disj 2)
        ;(*caten 2)
        done))
-
 
 
 (define <InfixMul>
@@ -443,17 +440,22 @@
 
 
 (define <InfixSymbol>
-  (new (*parser <Symbol>)
+  (new (*parser <SymbolChar>)
        (*parser <InfixSymbolList>)
        *diff
+       *star
+       (*pack (lambda(x) (string->symbol (list->string x))))
        done))
 
 (define <InfixNeg>
   (new (*parser (char #\-))
        (*delayed (lambda() <Initial>))
        (*caten 2)
-       (*pack-with (lambda(char exp)
-		     (- exp)))
+       (*pack-with
+        (lambda(char exp)
+          (if (number? exp)
+              (- exp)
+              `(- ,exp))))
        done))
 
 
