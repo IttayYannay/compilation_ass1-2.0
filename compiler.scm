@@ -1,6 +1,6 @@
 (load "pc.scm")
 
-					;From Mayer's tutorial:
+;from Mayer's tutorial:
 (define <whitespace>
   (const
    (lambda (ch)
@@ -47,7 +47,6 @@
 
 (define ^<skipped*> (^^<wrapped> (star <skip>)))
 
-
 ; done dealing with whitespace & endline
 
 
@@ -61,11 +60,10 @@
   (range #\! #\~))
 
 (define <a-f_Char>
-  (range #\a #\f))
+  (range-ci #\a #\f))
 
 (define <ci-Char-a-z>
   (range-ci #\a #\z))
-
 
 (define <Chars-for-SymbolChar>
   (new (*parser (char #\!))
@@ -113,57 +111,55 @@
 (define  <VisibleSimpleChar>
   (new
    (*parser <ValidChar> )
-   done
-   ))
+   done))
 
 (define  <NamedChar>  
-  (new  (*parser (word "lambda"))
+  (new  (*parser (word-ci "lambda"))
 	(*pack (lambda (_)  (integer->char 955)))
-	(*parser (word "newline"))
+	(*parser (word-ci "newline"))
        	(*pack (lambda (_)  (integer->char 10)))
-       	(*parser (word "nul"))
+       	(*parser (word-ci "nul"))
      	(*pack (lambda (_)  (integer->char 0)))
-       	(*parser (word "page"))
+       	(*parser (word-ci "page"))
        	(*pack (lambda (_) (integer->char 12)))
-       	(*parser (word "return"))
+       	(*parser (word-ci "return"))
       	(*pack (lambda (_) (integer->char 13)))
-       	(*parser (word "space"))
+       	(*parser (word-ci "space"))
       	(*pack (lambda (_) (integer->char 32)))
-	(*parser (word "tab"))
+	(*parser (word-ci "tab"))
 	(*pack (lambda (_) (integer->char 9)))
 	(*disj 7)
-
 	done ))
-
 
 (define <HexChar>
   (new (*parser <digit-0-9>)
        (*parser <a-f_Char>)
        (*disj 2)
+       (*pack (lambda(ch) (char-downcase ch)))
        done
        ))
 
 (define  <HexUnicodeChar> 
-  (new (*parser (char #\x))
-       (*parser <HexChar>) *plus
-       (*caten 2)
-       (*pack-with (lambda(xChar list)
-		    (integer->char
-		     (string->number
-		      (list->string list) 16))))
-       done))
+  (new
+   (*parser (char-ci #\x))
+   (*parser <HexChar>) *star
+   (*caten 2)
+   (*pack-with (lambda(x_ch list)          
+                 (integer->char
+                  (string->number
+                   (list->string list) 16))))
+   done))
 
 (define <Char>
   (new (*parser <CharPrefix>)
        (*parser <NamedChar>)
        (*parser <HexUnicodeChar>)
-       (*parser <VisibleSimpleChar>)
+       (*parser <VisibleSimpleChar>) ;case-sensative
        (*disj 3)
        (*caten 2)
-       (*pack-with (lambda(pre ch)
+       (*pack-with (lambda(chPref ch)
 		    ch))
       done))
-
 
 (define <string-meta-char>
   (new (*parser (word "\\\\"))
