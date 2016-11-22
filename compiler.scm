@@ -161,7 +161,7 @@
 		    ch))
       done))
 
-(define <string-meta-char>
+(define <string-meta-char-from-Mayer>
   (new (*parser (word "\\\\"))
        (*pack (lambda (_) #\\))
        (*parser (word "\\\""))
@@ -171,7 +171,7 @@
 
 
 (define <StringLiteralChar>
-  (new (*parser <string-meta-char>)
+  (new (*parser <string-meta-char-from-Mayer>)
        (*parser <any-char>)
        (*parser (char #\"))
        (*parser (char #\\))
@@ -274,6 +274,8 @@
        (*parser <ci-Char-a-z>)
        (*parser <Chars-for-SymbolChar>)
        (*disj 3)
+       (*pack (lambda(ch)
+                (char-downcase ch)))
       done))
 
 (define <Symbol>
@@ -362,7 +364,6 @@
 			    (list 'unquote-splicing sexpr)))
        done))
 
-
 (define <Sexpr> 
 (^<skipped*>  ;support for comment-line & whitespace 
  (new (*parser <Boolean>)
@@ -382,7 +383,6 @@
        done
        )))
 
-
 (define <InfixPrefixExtensionPrefix>
   (new (*parser (char #\#))
        (*parser (char #\#))
@@ -394,7 +394,6 @@
       ; (*disj 2)
        ;(*caten 2)
        done))
-
 
 (define <InfixMul>
   (new	 (*parser <Number>)
@@ -438,7 +437,6 @@
        done
        ))
 
-
 (define <InfixSymbol>
   (new (*parser <SymbolChar>)
        (*parser <InfixSymbolList>)
@@ -468,6 +466,8 @@
                         exp))
           done))
 
+
+
 (define <InfixArrayGet>
   (new
   (*delayed (lambda() <InfixSymbol>)) ;change to InfixSymbol
@@ -492,9 +492,9 @@
 (define <InfixArgList>
   (new (*delayed (lambda() <Sexpr>)) 
        (*parser (char #\())
-       (*parser <Initial>) 
+       (*delayed (lambda() <Initial>)) 
        (*parser (char #\,))
-       (*parser <Initial>)
+       (*delayed (lambda()<Initial>))
        (*caten 2)
        (*pack-with (lambda (com exp) exp))
        *star
@@ -507,12 +507,12 @@
 
        done))
 
-
 (define <PlusMinusChars>
   (new (*parser (char #\+))
        (*parser (char #\-))
        (*disj 2)
        done))
+
 (define <MulDivChars>
   (new (*parser (char #\*))
        (*parser (char #\/))
@@ -525,14 +525,15 @@
 
 (define <Pow_End> ;L3=Number|InfixSymbolSymbol|InfixParen
   (^<skipped*>
-   (new
-    (*parser <InfixNeg>)
+    (new
+     (*parser <InfixNeg>)
    (*parser <Number>)
    (*parser  <InfixArrayGet>) ;symbol
    (*parser  <InfixArgList>)  ;symbol
+   (*parser <InfixSexprEscape>)
    (*parser <InfixSymbol>)     
    (*parser <InfixParen>)
-   (*disj 6)
+   (*disj 7)
    done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
@@ -547,9 +548,9 @@
                    `(expt ,first_element ,exps))))
    *star
    (*caten 2)
-     (*pack-with (lambda (first_exp lambda_rest_exps)
-                   (fold-left (lambda (operator acc)
-                                (acc operator)) first_exp lambda_rest_exps)))
+   (*pack-with (lambda (first_exp lambda_rest_exps)
+                 (fold-left (lambda (operator acc)
+                              (acc operator)) first_exp lambda_rest_exps)))
    done)))
 
 
@@ -580,6 +581,7 @@
    (*caten 2)
         (*pack-with (lambda (sign exps)
                     (lambda (first_element)
+                      ;(display 'addsubpack)
                       `(,(string->symbol (string sign)) ,first_element ,exps))))
    *star
    (*caten 2)
@@ -603,60 +605,6 @@ done))
   (new (*parser <InfixPrefixExtensionPrefix>)
        (*parser <Sexpr>)
        (*caten 2)
+       (*pack-with (lambda(pre exp)
+                    exp))
        done))
-
-
-
-  
-;---------------------------------------------------------------------------------------------------------------------------
-;<infixExp>==><sub>
-;*<sub>==> <add>(' - ' <add>)
-;*<add>==> <div>(' + ' <div>)
-;*<div>==> <mul>(' / ' <mul>)
-;.............
-;<theLastOne> ==>(number | infixSymbol | parenthesis |........)
-
-
-;ביטוי infix-הכיוון לפי מה שהבנתי הוא
-; + הופך לביטוי כפל, כפל הופך לחזקה, חזקה למס', מס' לסוגריים
-
-;. זאת אומרת גזירה מהתעדוף הכי נמוך לגבוה
-;. זה הכיוון, עוד לא מצאתי פיתרון.
-
-
-
-#;(define <End>
-  (new
-   (*parser <Number>)
-   (*parser  <InfixNeg>)
-;  (*parser <Weak>)
-   
-   (*disj 2 )
-   done))
-
-#;(define <Sub>
-  (new
-   (*parser <End>)
-   (*parser (char #\-))
-   (*parser <End>)
-   (*caten 3)
-   (*pack-with (lambda(exp1 op exp2)
-		 (list op exp1 exp2)))
-   done))
-
-
-
-
-  #;(define <Add>
-  (new
-   ;(*delayed (lambda() <Initial>))
-   (*parser <End>)
-  ; (*disj 2)
-   (*parser (char #\+))
-   (*delayed (lambda() <Initial>))
-   ;(*parser <End>)
-  ; (*disj 2)
-   (*caten 3) 
-   (*pack-with (lambda(exp1 op exp2)
-		 (list op exp1 exp2)))
-   done))
