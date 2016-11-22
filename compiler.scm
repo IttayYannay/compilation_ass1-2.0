@@ -362,7 +362,6 @@
 			    (list 'unquote-splicing sexpr)))
        done))
 
-
 (define <Sexpr> 
 (^<skipped*>  ;support for comment-line & whitespace 
  (new (*parser <Boolean>)
@@ -382,7 +381,6 @@
        done
        )))
 
-
 (define <InfixPrefixExtensionPrefix>
   (new (*parser (char #\#))
        (*parser (char #\#))
@@ -394,7 +392,6 @@
       ; (*disj 2)
        ;(*caten 2)
        done))
-
 
 (define <InfixMul>
   (new	 (*parser <Number>)
@@ -438,7 +435,6 @@
        done
        ))
 
-
 (define <InfixSymbol>
   (new (*parser <SymbolChar>)
        (*parser <InfixSymbolList>)
@@ -467,6 +463,8 @@
           (*pack-with (lambda(bra1 exp bra2)
                         exp))
           done))
+
+
 
 (define <InfixArrayGet>
   (new
@@ -507,12 +505,12 @@
 
        done))
 
-
 (define <PlusMinusChars>
   (new (*parser (char #\+))
        (*parser (char #\-))
        (*disj 2)
        done))
+
 (define <MulDivChars>
   (new (*parser (char #\*))
        (*parser (char #\/))
@@ -527,13 +525,12 @@
   (^<skipped*>
    (new
     (*parser <InfixNeg>)
-   (*parser <Number>)
-   (*parser  <InfixArrayGet>) ;symbol
-   (*parser  <InfixArgList>)  ;symbol
-   (*parser <InfixSymbol>)     
-   (*parser <InfixParen>)
-   (*disj 6)
-   done)))
+    (*parser <Number>)
+    (*parser <InfixSymbol>)     ;not-followed-by ? 
+    (*parser <InfixParen>)
+    
+    (*disj 4)
+    done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
   (^<skipped*>
@@ -547,9 +544,9 @@
                    `(expt ,first_element ,exps))))
    *star
    (*caten 2)
-     (*pack-with (lambda (first_exp lambda_rest_exps)
-                   (fold-left (lambda (operator acc)
-                                (acc operator)) first_exp lambda_rest_exps)))
+   (*pack-with (lambda (first_exp lambda_rest_exps)
+                 (fold-left (lambda (operator acc)
+                              (acc operator)) first_exp lambda_rest_exps)))
    done)))
 
 
@@ -580,6 +577,7 @@
    (*caten 2)
         (*pack-with (lambda (sign exps)
                     (lambda (first_element)
+                      ;(display 'addsubpack)
                       `(,(string->symbol (string sign)) ,first_element ,exps))))
    *star
    (*caten 2)
@@ -604,59 +602,3 @@ done))
        (*parser <Sexpr>)
        (*caten 2)
        done))
-
-
-
-  
-;---------------------------------------------------------------------------------------------------------------------------
-;<infixExp>==><sub>
-;*<sub>==> <add>(' - ' <add>)
-;*<add>==> <div>(' + ' <div>)
-;*<div>==> <mul>(' / ' <mul>)
-;.............
-;<theLastOne> ==>(number | infixSymbol | parenthesis |........)
-
-
-;ביטוי infix-הכיוון לפי מה שהבנתי הוא
-; + הופך לביטוי כפל, כפל הופך לחזקה, חזקה למס', מס' לסוגריים
-
-;. זאת אומרת גזירה מהתעדוף הכי נמוך לגבוה
-;. זה הכיוון, עוד לא מצאתי פיתרון.
-
-
-
-#;(define <End>
-  (new
-   (*parser <Number>)
-   (*parser  <InfixNeg>)
-;  (*parser <Weak>)
-   
-   (*disj 2 )
-   done))
-
-#;(define <Sub>
-  (new
-   (*parser <End>)
-   (*parser (char #\-))
-   (*parser <End>)
-   (*caten 3)
-   (*pack-with (lambda(exp1 op exp2)
-		 (list op exp1 exp2)))
-   done))
-
-
-
-
-  #;(define <Add>
-  (new
-   ;(*delayed (lambda() <Initial>))
-   (*parser <End>)
-  ; (*disj 2)
-   (*parser (char #\+))
-   (*delayed (lambda() <Initial>))
-   ;(*parser <End>)
-  ; (*disj 2)
-   (*caten 3) 
-   (*pack-with (lambda(exp1 op exp2)
-		 (list op exp1 exp2)))
-   done))
