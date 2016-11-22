@@ -466,6 +466,36 @@
                         exp))
           done))
 
+(define <InfixArrayGet>
+  (new
+  (*delayed (lambda() <Symbol>)) ;change to InfixSymbol
+  (*parser (char #\[))
+  (*delayed (lambda() <Initial>))
+  (*parser (char#\]))
+  (*caten 4)
+  (*pack-with (lambda (vec par1 index par2)
+		`(vector-ref ,vec ,index)))
+
+  done))
+
+(define <InfixArgList>
+  (new (*delayed (lambda() <Sexpr>)) 
+       (*parser (char #\())
+       (*parser <Initial>) 
+       (*parser (char #\,))
+       (*parser <Initial>)
+       (*caten 2)
+       (*pack-with (lambda (com exp) exp))
+       *star
+       (*parser (char #\)))
+       (*caten 5)
+       (*pack-with (lambda(func par1 first args par2)
+		     (if (null? args)
+		        `(,func ,first)
+			`(,func ,first ,@args))))
+
+       done))
+
 
 (define <PlusMinusChars>
   (new (*parser (char #\+))
@@ -486,11 +516,11 @@
   (^<skipped*>
    (new
    (*parser <Number>)
-
-   (*parser <InfixSymbol>)     ;not-followed-by ? 
-
+   (*parser  <InfixArrayGet>) ;symbol
+   (*parser  <InfixArgList>)  ;symbol
+   (*parser <InfixSymbol>)     
    (*parser <InfixParen>)
-   (*disj 3)
+   (*disj 5)
    done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
