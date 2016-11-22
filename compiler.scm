@@ -164,9 +164,24 @@
 		    ch))
       done))
 
-(define <StringLiteralChar> 
-  (new (*parser <any-char>)
-       (*parser (char #\\)) *diff
+
+(define <string-meta-char>
+  (new (*parser (word "\\\\"))
+       (*pack (lambda (_) #\\))
+       (*parser (word "\\\""))
+       (*pack (lambda (_) #\"))
+       (*disj 2)
+       done))
+
+
+(define <StringLiteralChar>
+  (new (*parser <string-meta-char>)
+       (*parser <any-char>)
+       (*parser (char #\"))
+       (*parser (char #\\))
+       (*disj 2)
+       *diff
+       (*disj 2)
        done))
 
 (define <StringMetaChar>
@@ -195,9 +210,9 @@
 
 (define <StringChar>
   (new (*parser <StringLiteralChar>)
-     ;  (*parser <StringMetaChar>)
-     ;  (*parser <StringHexChar>)
-    ;   (*disj 2)
+       (*parser <StringMetaChar>)
+       (*parser <StringHexChar>)
+       (*disj 3)
        done));
 
 (define <String> 
@@ -205,6 +220,8 @@
        (*parser <StringChar>) *star
        (*parser (char #\"))
        (*caten 3)
+       (*pack-with (lambda(bra1 str bra2)
+                    (list->string str)))
        done))
 
 (define <Natural>
@@ -473,7 +490,9 @@
   (^<skipped*>
    (new
    (*parser <Number>)
-   (*parser <InfixSymbol>)  
+
+   (*parser <InfixSymbol>)     ;not-followed-by ? 
+
    (*parser <InfixParen>)
    (*disj 3)
    done)))
