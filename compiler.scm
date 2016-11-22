@@ -468,14 +468,23 @@
 
 (define <InfixArrayGet>
   (new
-  (*delayed (lambda() <Symbol>)) ;change to InfixSymbol
+  (*delayed (lambda() <InfixSymbol>)) ;change to InfixSymbol
   (*parser (char #\[))
   (*delayed (lambda() <Initial>))
   (*parser (char#\]))
   (*caten 4)
   (*pack-with (lambda (vec par1 index par2)
 		`(vector-ref ,vec ,index)))
-
+  (*parser (char #\[))
+  (*delayed (lambda() <Initial>))
+  (*parser (char#\]))
+  (*caten 3)
+  (*pack-with (lambda (par1 index par2)
+		`(,index)))
+  *star
+  (*caten 2)
+  (*pack-with (lambda(vec index)
+		`(vector-ref ,vec ,index)))
   done))
 
 (define <InfixArgList>
