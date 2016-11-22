@@ -161,7 +161,7 @@
 		    ch))
       done))
 
-(define <string-meta-char>
+(define <string-meta-char-from-Mayer>
   (new (*parser (word "\\\\"))
        (*pack (lambda (_) #\\))
        (*parser (word "\\\""))
@@ -171,7 +171,7 @@
 
 
 (define <StringLiteralChar>
-  (new (*parser <string-meta-char>)
+  (new (*parser <string-meta-char-from-Mayer>)
        (*parser <any-char>)
        (*parser (char #\"))
        (*parser (char #\\))
@@ -274,6 +274,8 @@
        (*parser <ci-Char-a-z>)
        (*parser <Chars-for-SymbolChar>)
        (*disj 3)
+       (*pack (lambda(ch)
+                (char-downcase ch)))
       done))
 
 (define <Symbol>
@@ -490,9 +492,9 @@
 (define <InfixArgList>
   (new (*delayed (lambda() <Sexpr>)) 
        (*parser (char #\())
-       (*parser <Initial>) 
+       (*delayed (lambda() <Initial>)) 
        (*parser (char #\,))
-       (*parser <Initial>)
+       (*delayed (lambda()<Initial>))
        (*caten 2)
        (*pack-with (lambda (com exp) exp))
        *star
@@ -523,14 +525,16 @@
 
 (define <Pow_End> ;L3=Number|InfixSymbolSymbol|InfixParen
   (^<skipped*>
-   (new
-    (*parser <InfixNeg>)
-    (*parser <Number>)
-    (*parser <InfixSymbol>)     ;not-followed-by ? 
-    (*parser <InfixParen>)
-    
-    (*disj 4)
-    done)))
+    (new
+     (*parser <InfixNeg>)
+   (*parser <Number>)
+   (*parser  <InfixArrayGet>) ;symbol
+   (*parser  <InfixArgList>)  ;symbol
+   (*parser <InfixSexprEscape>)
+   (*parser <InfixSymbol>)     
+   (*parser <InfixParen>)
+   (*disj 7)
+   done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
   (^<skipped*>
@@ -601,4 +605,6 @@ done))
   (new (*parser <InfixPrefixExtensionPrefix>)
        (*parser <Sexpr>)
        (*caten 2)
+       (*pack-with (lambda(pre exp)
+                    exp))
        done))
