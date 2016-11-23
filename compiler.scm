@@ -22,10 +22,7 @@
 
 (define <sexpr-comment>
   (new (*parser (word "#;"))
-       (*delayed (lambda () <Initial>))
        (*delayed (lambda () <Sexpr>))
-     
-       (*disj 2)
        (*caten 2)
        done))
 
@@ -50,7 +47,24 @@
 
 (define ^<skipped*> (^^<wrapped> (star <skip>)))
 
-; done dealing with whitespace & endline
+;------------------------------------ infix comments---------------------------------------------
+(define <infix-comment>
+  (new (*parser (word "#;"))
+       (*delayed (lambda () <Initial>))
+       (*caten 2)
+       done))
+
+(define <comment_for_infix>
+  (disj <line-comment>
+	<infix-comment>))
+
+(define <skip_for_infix>
+  (disj <comment_for_infix>
+	<whitespace>))
+
+(define ^<skipped_infix*> (^^<wrapped> (star <skip_for_infix>)))
+
+;------------------------------------ done dealing with whitespace & endline------------------------------------------------------
 
 (define <digit-0-9>
   (range #\0 #\9))
@@ -473,12 +487,12 @@
        (*caten 2)
        (*pack-with
         (lambda(char exp) ;(display "neg")
-          (cond ((number? exp) (- exp))
+          ;(cond ((number? exp) (- exp))
                 ;((list? exp) exp)
                 ;((null? exp) '-)
                 ;((symbol? (car exp)) exp) 
-              (else
-                `(- ,exp)))))
+              ;(else
+                `(- ,exp)));))
        done))
 
 
@@ -530,15 +544,15 @@
 
 
 (define <Pow_End>   ;L3
-  (^<skipped*>
+  (^<skipped_infix*>
    (new
     (*delayed (lambda() <InfixSexprEscape>))
     ;(*parser  <InfixArrayGet>) ;symbol
     (*parser  <InfixFuncall>)  ;symbol
 
-    
     (*parser <InfixParen>)
     (*parser <Number>)
+    
     (*parser <InfixNeg>)
     (*parser <InfixSymbol>)
     (*parser <epsilon>)
@@ -547,11 +561,13 @@
     done)))
 
 (define <MulDiv> ;L2=L3(+L3)*
-  (^<skipped*>
+  (^<skipped_infix*>
    (new
    (*parser <Pow_End>)
    (*parser <PowChars>)
+   (*parser <MulDiv>)
    (*parser <Pow_End>)
+   (*disj 2)
    (*caten 2)
    (*pack-with (lambda (sign exps)
                  (lambda (first_element)
@@ -559,13 +575,13 @@
    *star
    (*caten 2)
    (*pack-with (lambda (first_exp lambda_rest_exps)
-                 (fold-left (lambda (operator acc)
-                              (acc operator)) first_exp lambda_rest_exps)))
+                 (fold-left (lambda (acc operator )
+                              (operator acc)) first_exp lambda_rest_exps)))
    done)))
-; b ^ c ^ d
+
 
 (define <AddSub> ;L1=L2(+L2)*
-    (^<skipped*>
+    (^<skipped_infix*>
      (new
       (*parser <MulDiv>)
       (*parser <MulDivChars>)
@@ -583,7 +599,7 @@
 
 
 (define <Initial>  ;L0=L1(+L1)*
-  (^<skipped*>
+  (^<skipped_infix*>
    (new
    (*parser <AddSub>)
    (*parser <PlusMinusChars>)
@@ -600,7 +616,7 @@
    done)))
 
 (define <InfixExtension>
-  (^<skipped*>
+  (^<skipped_infix*>
    (new (*parser <InfixPrefixExtensionPrefix>)
        (*parser <Initial>)
        (*caten 2)
