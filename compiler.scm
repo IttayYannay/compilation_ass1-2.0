@@ -253,10 +253,6 @@
                     (list->string str)))
        done))
 
-(define <Numbers_Char_Filter>
-  (new (*parser
-        (not-followed-by <Number> <Symbol>))
-       done))
 
 (define <Natural>
   (new 
@@ -332,6 +328,12 @@
   (new (*parser <SymbolChar>) *plus
        (*pack (lambda(x) (string->symbol (list->string x))))
       done))
+
+
+(define <Numbers_Char_Filter>
+  (new (*parser
+        (not-followed-by <Number> <Symbol>))
+       done))
 
 
 (define <open-Bra>
@@ -418,7 +420,7 @@
 (^<skipped*>  ;support for comment-line & whitespace 
  (new (*parser <Boolean>)
       (*parser <Char>)
-      (*parser <OnlyNumbers>)
+      (*parser <Numbers_Char_Filter>)
       (*parser <String>)  
       (*parser <Symbol>)
       (*parser <ProperList>)
